@@ -2,11 +2,15 @@
 Kuku FM downloader!
 
 ### Features
-- Downloads podcasts/story/etc.
+- Downloads podcasts/story/videos/etc.
 - Tags the tracks/eps with all the necessary metadata and cover artwork.
 - Subtitles
 
-### You can use docker container or install the package locally : 
+### Generate Cookies
+- Install [Get cookies.txt](https://chromewebstore.google.com/detail/cclelndahbckbenkjhflpdbgdldlbecc) extension
+- Login to kukufm.com with premium account and click on extension then select export format as `Netscape` then copy and paste the cookies to `cookies.txt` file in this project root.
+
+### You can use docker container or install the package locally :
 
 #### Docker container
 - build docker image : ``docker build . -t kuku-dl``
