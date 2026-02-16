@@ -17,7 +17,6 @@ Kuku FM downloader!
 - run docker image : ``docker run -v ./Downloads:/kuku-dl/Downloads kuku-dl [KUKUFM_URL]``
 
 #### Install locally
-- Install [FFMPEG](https://ffmpeg.org/)
 - `pip install requirements.txt`
 
 ### Usage     
