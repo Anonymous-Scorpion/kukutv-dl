@@ -6,15 +6,23 @@ Kuku FM downloader!
 - Tags the tracks/eps with all the necessary metadata and cover artwork.
 - Subtitles
 
-### Setup
-- `pip install requirements.txt`
+### Generate Cookies
 - Install [Get cookies.txt](https://chromewebstore.google.com/detail/cclelndahbckbenkjhflpdbgdldlbecc) extension
 - Login to kukufm.com with premium account and click on extension then select export format as `Netscape` then copy and paste the cookies to `cookies.txt` file in this project root.
+
+### You can use docker container or install the package locally :
+
+#### Docker container
+- build docker image : ``docker build . -t kuku-dl``
+- run docker image : ``docker run -v ./Downloads:/kuku-dl/Downloads kuku-dl [KUKUFM_URL]``
+
+#### Install locally
+- `pip install requirements.txt`
 
 ### Usage     
       
 ```
-py kuku.py [url]
+python kuku.py [url]
 ```
 
 ### Sample MediaInfo
