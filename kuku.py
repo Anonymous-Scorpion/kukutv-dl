@@ -53,9 +53,12 @@ class KuKu:
             'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
             'origin': 'https://kukutv.app',
             'referer': 'https://kukutv.app/',
+            'package-name': 'com.vlv.web.reels',
+            'preferred-lang': 'hindi',
+            'x-source-service': 'nodejs-web',
         })
         self.session.cookies.update(cookie_jar)
-        
+
         # Clean up the temporary cookie file
         if os.path.exists(temp_cookie_path):
             try:
@@ -64,7 +67,7 @@ class KuKu:
                 pass
 
         if self.jwt:
-            self.session.headers['Authorization'] = f'Bearer {self.jwt}'
+            self.session.headers['Authorization'] = f'jwt {self.jwt}'
             # Also ensure jwtToken is set explicitly in cookies for safety
             self.session.cookies.set('jwtToken', self.jwt, domain='.kukutv.app')
 
