@@ -35,17 +35,41 @@ class KuKu:
         """
         __init__()
 
-        initializes a session to be used to recieve API data from KukuFM.
+        initializes a session to be used to recieve API data from KukuFM/KukuTV.
         """
-        self.showID = urlparse(url).path.split('/')[-1]
+        parsed_url = urlparse(url)
+        self.api_base = f"https://{parsed_url.netloc}" if parsed_url.netloc else "https://kukutv.app"
+        self.showID = parsed_url.path.split('/')[-1]
         self.session = requests.Session()
-        cookie_jar = MozillaCookieJar('cookies.txt')
+        
+        # Load and sanitize cookies, extracting JWT
+        self.jwt = None
+        temp_cookie_path = self.prepare_cookies()
+        
+        cookie_jar = MozillaCookieJar(temp_cookie_path)
         cookie_jar.load(ignore_discard=True, ignore_expires=True)
-        self.session.headers.update(HEADERS)
+        self.session.headers.update({
+            'accept': '*/*',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36',
+            'origin': 'https://kukutv.app',
+            'referer': 'https://kukutv.app/',
+        })
         self.session.cookies.update(cookie_jar)
+        
+        # Clean up the temporary cookie file
+        if os.path.exists(temp_cookie_path):
+            try:
+                os.unlink(temp_cookie_path)
+            except:
+                pass
+
+        if self.jwt:
+            self.session.headers['Authorization'] = f'Bearer {self.jwt}'
+            # Also ensure jwtToken is set explicitly in cookies for safety
+            self.session.cookies.set('jwtToken', self.jwt, domain='.kukutv.app')
 
         response = self.session.get(
-            f"https://kukufm.com/api/v2.3/channels/{self.showID}/episodes/?page=1")
+            f"{self.api_base}/api/v2.3/channels/{self.showID}/episodes/?page=1")
         data = response.json()
 
         show: dict = data['show']
@@ -84,6 +108,55 @@ class KuKu:
     def sanitiseName(name) -> str:
         return re.sub(r'[:]', ' - ', re.sub(r'[\\/*?"<>|$]', '', re.sub(r'[ \t]+$', '', str(name).rstrip())))
 
+    def prepare_cookies(self) -> str:
+        """Reads cookies.txt, extracts JWT, duplicates domain cookies for CDNs, and returns path to temporary cookie file."""
+        import tempfile
+        cookie_file = 'cookies.txt'
+        if not os.path.exists(cookie_file):
+            # Create an empty temporary cookie file
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp:
+                return tmp.name
+                
+        with open(cookie_file, 'r', encoding='utf-8', errors='ignore') as f:
+            lines = f.readlines()
+
+        new_lines = []
+        target_domains = [
+            '.kukutv.app',
+            '.kukufm.com',
+            '.cloudfront.net',
+            'd1l07mcd18xic4.cloudfront.net',
+            'media.cdn.kukufm.com'
+        ]
+
+        for line in lines:
+            stripped = line.strip()
+            if not stripped or stripped.startswith('#'):
+                new_lines.append(line)
+                continue
+            parts = line.split('\t')
+            if len(parts) >= 7:
+                domain = parts[0]
+                flag = parts[1].upper()
+                name = parts[5]
+                value = parts[6]
+                
+                if name == 'jwtToken':
+                    self.jwt = value.strip()
+                
+                # Duplicate this cookie for all target domains to prevent CloudFront 403 errors
+                for target in target_domains:
+                    new_parts = list(parts)
+                    new_parts[0] = target
+                    new_parts[1] = 'TRUE' if target.startswith('.') else 'FALSE'
+                    new_lines.append('\t'.join(new_parts) + '\n')
+            else:
+                new_lines.append(line)
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as tmp:
+            tmp.writelines(new_lines)
+            return tmp.name
+
     def downloadAndTag(self, episodeMetadata: dict, path: str, srtPath: str, coverPath: str) -> None:
         """
         downloadAndTag()
@@ -100,17 +173,27 @@ class KuKu:
             print(episodeMetadata['title'], 'already exists!', flush=True)
             return
 
+        temp_cookie_path = self.prepare_cookies()
+
         ydl_opts = {
-            'format': 'best',
+            'format': 'bestvideo+bestaudio/best',
+            'merge_output_format': 'mp4',
             'outtmpl': path,
             'http_headers': HEADERS,
-            'quiet': True,
-            'no_warnings': True,
-            'cookiefile': "cookies.txt",
+            'quiet': False,
+            'no_warnings': False,
+            'cookiefile': temp_cookie_path,
+            'hls_prefer_native': False,
         }
 
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             ydl.download([episodeMetadata['url']])
+
+        if os.path.exists(temp_cookie_path):
+            try:
+                os.unlink(temp_cookie_path)
+            except:
+                pass
 
         hasLyrics: bool = len(episodeMetadata['srt'])
 
@@ -181,7 +264,7 @@ class KuKu:
 
         while True:
             response = self.session.get(
-                f'https://kukufm.com/api/v2.3/channels/{self.showID}/episodes/?page={page}')
+                f'{self.api_base}/api/v2.3/channels/{self.showID}/episodes/?page={page}')
             data = response.json()
             episodes.extend(data["episodes"])
             page += 1
@@ -190,16 +273,24 @@ class KuKu:
                 break
 
         for ep in episodes:
+            hls_url = ep['content'].get('hls_url', '').strip()
+            audio_url = ep['content'].get('premium_audio_url', '').strip()
+            stream_url = hls_url or audio_url
+
+            print(f"  Ep {ep['index']:02d}: hls_url={'YES' if hls_url else 'EMPTY'} | audio_url={'YES' if audio_url else 'EMPTY'} | locked={ep.get('is_play_locked')}")
+
+            if not stream_url:
+                print(f"  [SKIP] No stream URL available for episode {ep['index']}")
+                continue
+
             epMeta = {
                 'title': KuKu.sanitiseName(ep["title"].strip()),
-                'url': ep['content']['hls_url'].strip(),
+                'url': stream_url,
                 'srt': ep['content'].get('subtitle_url', "").strip(),
                 'epNo': ep['index'],
                 'seasonNo': ep['season_no'],
                 'date': str(ep.get('published_on')).strip(),
             }
-            # print(ep['content']['hls_url'])
-            # print(epMeta)
 
             trackPath = os.path.join(
                 albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.{'mp4' if self.metadata['hasVideoEps'] else 'm4a'}")

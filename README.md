@@ -1,76 +1,61 @@
-# kuku-dl
-Kuku FM downloader!
+# Kuku TV Video Downloader (kukutv-dl)
+
+A command-line tool to download full shows, episodes, and videos in high-definition from Kuku TV.
 
 ### Features
-- Downloads podcasts/story/videos/etc.
-- Tags the tracks/eps with all the necessary metadata and cover artwork.
-- Subtitles
+- **Full Video Support:** Downloads full-length video streams in high quality (up to 1080p resolution).
+- **Metadata Tagging:** Automatically embeds show title, season number, author, and show cover artwork.
+- **Subtitles:** Downloads and saves subtitles/SRT files if available.
 
-### Generate Cookies
-- Install [Get cookies.txt](https://chromewebstore.google.com/detail/cclelndahbckbenkjhflpdbgdldlbecc) extension
-- Login to kukufm.com with premium account and click on extension then select export format as `Netscape` then copy and paste the cookies to `cookies.txt` file in this project root.
+---
 
-### You can use docker container or install the package locally :
+### Prerequisites
+1. **Python 3.8+**
+2. **FFmpeg:** Required for merging video and audio streams. Ensure it is installed and added to your system PATH.
 
-#### Docker container
-- build docker image : ``docker build . -t kuku-dl``
-- run docker image : ``docker run -v ./Downloads:/kuku-dl/Downloads kuku-dl [KUKUFM_URL]``
+---
 
-#### Install locally
-- `pip install requirements.txt`
+### Installation & Setup
 
-### Usage     
-      
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/Anonymous-Scorpion/kukutv-dl.git
+   cd kukutv-dl
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+---
+
+### How to Authenticate (Cookies Setup)
+Since premium video shows are protected server-side, you must supply your login session to download them:
+
+1. Open your browser and log in to your premium account on **[kukutv.app](https://kukutv.app)**.
+2. Press **F12** (or right-click -> inspect) to open Developer Tools.
+3. Go to **Application** -> **Storage** -> **Cookies** (or inspect your browser cookies using a cookie manager extension).
+4. Find the cookie named **`jwtToken`** and copy its value (it starts with `eyJhbGciOi...`).
+5. Create a file named **`cookies.txt`** in the repository root directory.
+6. Paste the token into `cookies.txt` using the Netscape format below:
+   ```text
+   .kukutv.app	FALSE	/	FALSE	0	jwtToken	YOUR_JWT_TOKEN_HERE
+   ```
+   *(Note: The script will automatically parse this token, apply it to authorization headers, and securely fetch the CloudFront video streams).*
+
+---
+
+### Usage
+
+Run the downloader by passing the URL of the show you want to download:
+
+```bash
+python kuku.py "https://kukutv.app/watch/show-slug-name"
 ```
-python kuku.py [url]
-```
 
-### Sample MediaInfo
-```
-General
-Complete name                            : Downloads\Hindi\Audio Book\Swami Vivekanand (2019) [Hindi]\001. 1.  Swami Vivekanand.m4a
-Format                                   : MPEG-4
-Format profile                           : Apple audio with iTunes info
-Codec ID                                 : M4A  (M4A /isom/iso2)
-File size                                : 2.36 MiB
-Duration                                 : 3 min 47 s
-Overall bit rate mode                    : Constant
-Overall bit rate                         : 86.9 kb/s
-Season                                   : 1
-Album                                    : Swami Vivekanand
-Album/Performer                          : Raj Shrivastava
-Track name                               : 1.  Swami Vivekanand
-Track name/Position                      : 1
-Track name/Total                         : 64
-Performer                                : Raj Shrivastava
-ContentType                              : Audiobook
-Recorded date                            : 2019-07-30
-Cover                                    : Yes
-Age rating                               : 13+
-Fictional                                : False
-Language                                 : Hindi
-Type                                     : Audio Book
-Author                                   : Raj Shrivastava
-Voice artists                            : Raj Shrivastava
+---
 
-Audio
-ID                                       : 1
-Format                                   : AAC LC SBR
-Format/Info                              : Advanced Audio Codec Low Complexity with Spectral Band Replication
-Commercial name                          : HE-AAC
-Format settings                          : Implicit
-Codec ID                                 : mp4a-40-2
-Duration                                 : 3 min 47 s
-Bit rate mode                            : Constant
-Bit rate                                 : 62.8 kb/s
-Channel(s)                               : 2 channels
-Channel layout                           : L R
-Sampling rate                            : 44.1 kHz
-Frame rate                               : 21.533 FPS (2048 SPF)
-Compression mode                         : Lossy
-Stream size                              : 1.70 MiB (72%)
-Default                                  : Yes
-Alternate group                          : 1
-```
 ### Disclaimer
-- I will not be responsible for how you use kuku-dl.    
+- This project is strictly for **educational purposes** only. 
+- The author is not responsible for any misuse, copyright violations, or terms of service breaches. Use at your own discretion.
