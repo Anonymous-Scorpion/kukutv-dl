@@ -296,7 +296,7 @@ class KuKu:
             }
 
             trackPath = os.path.join(
-                albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.{'mp4' if self.metadata['hasVideoEps'] else 'm4a'}")
+                albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.{'mp4' if hls_url else 'm4a'}")
             srtPath = os.path.join(
                 albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.srt")
             self.downloadAndTag(epMeta, trackPath, srtPath,
