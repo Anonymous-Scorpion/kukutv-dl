@@ -276,14 +276,21 @@ class KuKu:
                 break
 
         for ep in episodes:
+            # Priority: video_hls_url (actual full video) > hls_url > premium_audio_url (38-sec preview only!)
+            video_hls_url = ep['content'].get('video_hls_url', '').strip()
             hls_url = ep['content'].get('hls_url', '').strip()
             audio_url = ep['content'].get('premium_audio_url', '').strip()
-            stream_url = hls_url or audio_url
+            stream_url = video_hls_url or hls_url or audio_url
+            is_video = bool(video_hls_url or hls_url)
 
-            print(f"  Ep {ep['index']:02d}: hls_url={'YES' if hls_url else 'EMPTY'} | audio_url={'YES' if audio_url else 'EMPTY'} | locked={ep.get('is_play_locked')}")
+            print(f"  Ep {ep['index']:02d}: video_hls_url={'YES' if video_hls_url else 'EMPTY'} | hls_url={'YES' if hls_url else 'EMPTY'} | audio_url={'YES' if audio_url else 'EMPTY'} | locked={ep.get('is_play_locked')}")
 
             if not stream_url:
                 print(f"  [SKIP] No stream URL available for episode {ep['index']}")
+                continue
+
+            if not is_video and audio_url:
+                print(f"  [WARN] Ep {ep['index']}: Only audio preview available (no video stream) — skipping")
                 continue
 
             epMeta = {
@@ -296,7 +303,7 @@ class KuKu:
             }
 
             trackPath = os.path.join(
-                albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.{'mp4' if hls_url else 'm4a'}")
+                albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.mp4")
             srtPath = os.path.join(
                 albumPath, f"{str(ep['index']).zfill(2)}. {epMeta['title']}.srt")
             self.downloadAndTag(epMeta, trackPath, srtPath,
