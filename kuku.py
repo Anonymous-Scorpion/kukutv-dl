@@ -280,8 +280,24 @@ class KuKu:
             video_hls_url = ep['content'].get('video_hls_url', '').strip()
             hls_url = ep['content'].get('hls_url', '').strip()
             audio_url = ep['content'].get('premium_audio_url', '').strip()
-            stream_url = video_hls_url or hls_url or audio_url
             is_video = bool(video_hls_url or hls_url)
+
+            # The paginated list endpoint is unreliable past page 1 - it can report an
+            # episode as locked/audio-only when the account genuinely has video access.
+            # Before giving up, double-check directly against the single-episode endpoint.
+            if not is_video and ep.get('slug'):
+                try:
+                    detail = self.session.get(f"{self.api_base}/api/v2/episodes/{ep['slug']}/").json().get('episode', {})
+                    detail_video_hls = detail.get('content', {}).get('video_hls_url', '').strip()
+                    detail_hls = detail.get('content', {}).get('hls_url', '').strip()
+                    if detail_video_hls or detail_hls:
+                        video_hls_url = detail_video_hls
+                        hls_url = detail_hls
+                        is_video = True
+                except Exception as e:
+                    print(f"  [!] Recheck via single-episode endpoint failed: {e}")
+
+            stream_url = video_hls_url or hls_url or audio_url
 
             print(f"  Ep {ep['index']:02d}: video_hls_url={'YES' if video_hls_url else 'EMPTY'} | hls_url={'YES' if hls_url else 'EMPTY'} | audio_url={'YES' if audio_url else 'EMPTY'} | locked={ep.get('is_play_locked')}")
 
